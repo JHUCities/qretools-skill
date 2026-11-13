@@ -13,9 +13,12 @@ It also gives the agent rules that protect respondents and keep the results hone
 
 The skill is the folder `qretools-research/`, in the Agent Skills format:
 
-- `SKILL.md`: when to use the skill, the sequence of the work, and the rules for research.
+- `SKILL.md`: when to use the skill, the terms, the sequence of the work, and the rules
+  for research.
 - `reference/commands.md`: the `qretools` commands.
-- `reference/datasets.md`: column maps, datasets, provenance, views and access levels.
+- `reference/workspace.md`: the files of a workspace, `build`, maps, and Qualtrics.
+- `reference/datasets.md`: datasets, the rule for facts, provenance, views and access
+  levels.
 - `reference/harness.md`: synthetic answers with
   [qretools-harness](https://github.com/JHUCities/qretools-harness).
 - `examples/gss-2010.md`: real answers from the General Social Survey and synthetic
@@ -45,9 +48,9 @@ Keep the other files where the links in `SKILL.md` find them.
 
 ## Versions
 
-The skill names the qretools versions that each form needs, in one table in `SKILL.md`.
-When a new version of qretools changes a command, update that table and the reference
-files.
+The skill is written for qretools 2.0.0-alpha.13 or later, the first version that reads
+a DDI URL. When a new version of qretools changes a command, update `SKILL.md` and the
+reference files.
 
 ## Licence
 

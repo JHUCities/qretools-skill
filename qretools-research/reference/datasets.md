@@ -1,108 +1,143 @@
-# Maps, datasets and views
+# Datasets and views
 
 The authority is the
 [README of the command](https://github.com/JHUCities/qretools/blob/main/packages/cli/README.md),
-sections "Read a data file", "Read an answers file", "The provenance" and "Export a
-dataset".
+sections "DDI by URL", "Read the responses", "The provenance", "Read a data file", "Read
+an answers file" and "Export a dataset".
 
-## The words
+## The command
 
-| Word | What it means |
+`qretools responses` is the only command that makes a dataset. It reads one of two inputs:
+
+| Input | Command |
 |---|---|
-| instrument | A survey: its questions and their order. `build` writes its DDI to `dist/instruments/<name>.json`. |
-| release | A tag of a workspace, for example `v3`. An instrument reads another workspace at a tag. |
-| tag reference | `owner/repo@tag:name`: the instrument `instruments/<name>.yaml` in a release. A workspace in a folder is `owner/repo/folder@tag:name`. |
-| map | A column map. It gives the DDI variable of each column of a data file. |
-| dataset | A DDI document that holds the answers and their provenance. |
-| provenance | Who answered, how the questions were asked, the dates, and the digest of each input file. |
-| view | What `dataset export` writes: CSV values, or the provenance only. |
-| access level | A level in the `access` list of `workspace.yaml`, from the most open to the most closed. |
+| A source file, with its map | `responses <file.csv> --map <map> [--ddi <DDI>] -o <dataset.json>` |
+| An answers file, with no map | `responses <answers.csv> --ddi <DDI> -o <dataset.json>`, and the options in "The facts" |
 
-## The map of a data file
+`<DDI>` is a file or a DDI URL. With `--map`, the command finds the DDI in this sequence:
 
-A map is JSON. Its file name is `maps/<instrument>-ddi-<source>.columns.json`.
-`<source>` is a short name of letters and digits. The `source` field of the map must
-give the same name, or the command refuses the map. The source `qsf` is a Qualtrics map.
+1. `--ddi`, if you give it.
+2. `<name>.json` in the folder of the map. `build` copies each map there.
+3. The release that the map records, if it records one.
 
-A map holds no answers. Commit it in `maps/`. The main fields are:
+If it finds none, it stops and asks for `--ddi`. For a map that records a release, give
+`--ddi <DDI URL>`. Without it, the command reads the tag, and then it must run with the
+qretools version that built the release.
 
-- `source`: the short name.
-- `ddi`: `sha256:` and the digest of the DDI that the map was made from. If the DDI is
-  different, `responses` gives a warning.
-- `answered_by` (necessary): who answered, as a term of the DDI vocabulary
-  DataSourceType, for example `ResearchData.Published`.
-- `citation`: `title`, and optional `publisher` and `url`, of the data file.
-- `respondent`: the header of the column that identifies each respondent.
-- `values`: translations from a value in the file to a code of the variable. `null`
-  means no answer.
-- `columns`: for each column, its header, the URN of its variable and, if necessary, its
-  own `values`, `filtered: true` or `censored`.
-- `metadata`: columns that no respondent is asked, for example the mode, the form or a
-  weight.
-- `weighting`: the advice of the publisher about the weights, its source, and the date
-  that it was read.
-- `interview_date`: the column that gives the date of each interview.
+**Caution: write each dataset outside the repository. A dataset holds all the answers.
+Do not write it into `dist/` or into a folder that CI publishes.**
 
-To make a map:
+## A DDI URL
 
-1. Run `build`.
-2. Write the map, or run the tool of the workspace that writes it.
-3. Get the digest of the DDI with `shasum -a 256 dist/instruments/<name>.json`.
-4. Write `sha256:` and the digest in `ddi`.
-5. Commit the map.
+`next`, `qsf-map`, `responses` and `dataset export` accept an `https://` URL where they
+accept a DDI file. This needs qretools 2.0.0-alpha.13 or later.
 
-When the DDI of the instrument changes, its digest changes. Then make the map again.
+- The command reads the URL one time. It keeps no copy.
+- The dataset records the URL and the SHA-256 digest of the DDI that it read.
+- The command does not compare the DDI with the tag in the URL. If a tag moves, the
+  digest in the dataset shows the change.
+- The command refuses `http://`. If it cannot read the URL, it writes nothing.
+- If the release is not published at a URL, give a file.
 
-## Make a dataset from a data file
+A tag reference, `<owner>/<repo>@<tag>:<name>`, also names a release in `qsf-map` and in
+`responses --map … --ddi`. Prefer the DDI URL.
 
-**Caution: write the CSV and the dataset outside the repository. They hold answers.**
+## What a dataset holds
 
-1. Convert the data file to CSV with one header row.
-2. Keep only the rows of one instrument, for example of one year.
-3. Run `npx -y qretools@<version> responses <data.csv> --map <map> --ddi <name.json> -o <outside>/<dataset>.json`.
-4. If the map has no mode column, add `--asked-by <term>`.
-5. Read the findings on stderr. A finding never shows a value.
+- Each value, with the URN of its DDI variable and the identifier of its respondent. A
+  dataset refers to the variables of the instrument. It holds no copy of them.
+- Three variables of its own: `respondent`, and `start` and `end`, the times of each
+  interview. A data file with no `interview_date` in its map gives no `start` or `end`.
+- For a data file, one variable for each `metadata` column of the map, for example the
+  mode or a weight.
+- The provenance (see below).
 
-## Make a dataset from an answers file
+The dates of the collection are the earliest start and the latest end of the interviews.
+No option gives the dates.
 
-An answers file is CSV with the header `respondent,variable,row,value`. Each variable is
-a URN of the DDI, or `start` or `end`. The `row` cell is empty. For no answer, write no
-line. Do not give the output of `dataset export --csv` as an answers file. It has the
-URNs of the dataset in place of `start` and `end`.
+## The facts
 
-- For model answers, give `--synthetic --runtime <name>`. The dataset then says that the
-  questions were asked in a simulation, and that "synthetic" answered.
-- For real answers, give `--answered-by <term> --asked-by <term>`.
+The dataset records how the respondents were asked (DDI vocabulary ModeOfCollection) and
+who answered (DDI vocabulary DataSourceType). The command gets each fact in this
+sequence:
 
-If the command finds an error, it writes no dataset.
+1. If the source gives the fact, the command uses it.
+2. If the source does not give the fact, an option must give it: `--asked-by <term>` or
+   `--answered-by <term>`.
+3. If no option gives it, the command stops. The message names the option.
+
+If an option gives a fact that the source also gives, the command stops. It writes
+nothing. In each of these cases it exits with 2 (`responses-facts`).
+
+| Source | The source gives | You must give |
+|---|---|---|
+| A data file whose map has a mode column, for example the GSS map | who answered, how each respondent was asked | nothing, but `--asked-by` if no respondent has a mode |
+| A data file whose map has no mode column | who answered | `--asked-by` |
+| Qualtrics test responses | asked in a simulation; answered by "generated by the survey platform" | nothing |
+| Qualtrics responses on an anonymous link or by email | asked by `SelfAdministeredQuestionnaire.CAWI` | `--answered-by` |
+| Other Qualtrics responses | nothing | `--asked-by`, `--answered-by` |
+| An answers file of model answers | with `--synthetic`: asked in a simulation; answered by "synthetic" | `--synthetic`, `--runtime` |
+| An answers file of real answers | nothing | `--answered-by`, `--asked-by` |
+
+The command does not check a term against the vocabulary. Do not guess a term. Ask the
+researcher.
+
+## The checks
+
+- The command checks each value against its variable in the DDI. A value that is not a
+  code of the variable, or not a number in its range, is an error.
+- If the map, the source or the DDI name different DDI digests, the command gives a
+  warning and continues. The dataset records each digest.
+- `--file` cites a file of a run by its digest. The command refuses `--file` with `--map`.
+- If the file of `-o` holds the same dataset, the command writes nothing and says
+  `unchanged`. If it holds a different file, the command refuses to replace it.
+- A finding never shows an answer.
+- The command does not filter. The dataset holds all the answers.
+
+For an answers file, an error stops the command, and it writes no dataset. For a source
+file, most errors do not stop the command. It writes the values that it can read, and
+exits with 1.
+
+## An answers file
+
+An answers file is CSV with the header `respondent,variable,row,value`:
+
+- `variable` is a URN of a variable in the DDI, or `start` or `end`.
+- `row` is empty.
+- `value` is never empty. For no answer, write no line.
+- `start` and `end` are ISO 8601 times with a zone.
+
+Do not give the output of `dataset export --csv` as an answers file. It has the URNs of
+the dataset in place of `start` and `end`.
 
 ## The provenance
 
 A dataset records:
 
 - the instrument and its version;
-- the dates of the collection, from the earliest start and the latest end of the
-  interviews (no option gives them);
-- how the respondents were asked (DDI vocabulary ModeOfCollection);
-- who answered (DDI vocabulary DataSourceType);
+- the dates of the collection;
+- how the respondents were asked, and who answered;
+- for a data file, the citation of the file, if the map gives one;
 - for a map with weights, a `Weighting` that holds the advice of the publisher;
-- the SHA-256 digest of all values (`DataFingerprint`);
+- for synthetic answers, the runtime and its version;
+- the SHA-256 digest of all the values (`DataFingerprint`);
 - the SHA-256 digest and size of the source file, the map, the DDI, and each `--file`;
-- the variables with a value (`present`) and, for a map, the variables that the map does
-  not read (`not-in-source`).
+- the variables with a value (`present`) and, for a map, the variables of the
+  instrument that the map does not read (`not-in-source`).
 
 ## Views
 
-Give `dataset export` the DDI that the dataset was made from.
+`dataset export` writes a view. Give it the DDI that the dataset was made from: the same
+file or the same URL. If the digest is different, the command writes nothing
+(`dataset-ddi`).
 
-1. Run `dataset export <dataset.json> --provenance --ddi <name.json> -o <file>`. You can
-   publish this view.
-2. Run `dataset export <dataset.json> --csv --ddi <name.json> -o <outside>/<file.csv>`.
+1. Run `npx -y qretools@<version> dataset export <dataset.json> --provenance --ddi <DDI> -o <file.json>`.
+   You can publish this view. It holds no value and no respondent.
+2. Run `npx -y qretools@<version> dataset export <dataset.json> --csv --ddi <DDI> -o <outside>/<file.csv>`.
    Do not publish this view.
 
-The CSV view is long: `respondent,variable,row,value`, one value on each line, sorted by
-respondent and then by the URN of the variable. It does not hold `respondent`, `start`
-or `end`.
+The CSV view has the header `respondent,variable,row,value`, with one value on each line.
+It does not hold the `respondent`, `start` and `end` variables.
 
 **Caution: open a CSV view in R, Python or the import of a spreadsheet. Do not open it
 with a double click. A text answer can hold a formula, and a spreadsheet can run it.**
@@ -121,17 +156,3 @@ The dataset holds all the values. `dataset export` filters only the view.
 
 **Caution: the command does not remove a computed value. A value computed from a
 restricted answer has no level.**
-
-## Compare two datasets
-
-1. Export the provenance view of each dataset.
-2. In each provenance view, find the `OtherMaterial` whose `TypeOfMaterial` is
-   `instrument DDI`. Its `UserID` (type `SHA-256`) is the digest of the DDI.
-3. If the digests are different, do not compare the datasets. Tell the researcher.
-4. Export the CSV view of each dataset with the same `--ddi` file. If the DDI is not the
-   DDI of a dataset, `dataset export` refuses (`dataset-ddi`).
-5. Compare the values of each variable URN in the two views.
-
-Do not join the two views on `respondent`. The respondents of two datasets are different
-people. Below the most closed level, the view also replaces each identifier with a
-number.

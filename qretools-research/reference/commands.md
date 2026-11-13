@@ -44,12 +44,14 @@ version that `build` reads from the git history.
 
 | Command | What it does |
 |---|---|
-| `responses <data.csv> --map <map> [--ddi <file>] [--asked-by <term>] [-o <dataset.json>]` | Makes a dataset from a data file (CSV with one header row) and its column map. |
-| `responses <answers.csv> --ddi <file> --synthetic --runtime <name> [--runtime-version <v>] [--file <path>]... [-o <dataset.json>]` | Makes a dataset from the answers of a model. The harness runs this command. |
-| `responses <answers.csv> --ddi <file> --answered-by <term> --asked-by <term> [--file <path>]... [-o <dataset.json>]` | Makes a dataset from real answers that are already in the form of an answers file. |
-| `dataset export <dataset.json> --csv --ddi <file> [--access <level>] [-o <file.csv>]` | Writes the values as long CSV. |
-| `dataset export <dataset.json> --provenance --ddi <file> [--access <level>] [-o <file.json>]` | Writes the dataset without its values. |
-| `qsf-map <name.json> -o <dir>` | Writes the column map of a Qualtrics survey. This skill does not use Qualtrics. |
+| `responses <data.csv> --map <map> [--ddi <DDI>] [--asked-by <term>] [-o <dataset.json>]` | Makes a dataset from a data file (CSV with one header row) and its column map. |
+| `responses <export.csv> --map <name>-ddi-qsf.columns.json [--ddi <DDI>] [--asked-by <term>] [--answered-by <term>] [-o <dataset.json>]` | Makes a dataset from a Qualtrics export and its Qualtrics map. |
+| `responses <answers.csv> --ddi <DDI> --synthetic --runtime <name> [--runtime-version <v>] [--file <path>]... [-o <dataset.json>]` | Makes a dataset from the answers of a model. The harness runs this command. |
+| `responses <answers.csv> --ddi <DDI> --answered-by <term> --asked-by <term> [--file <path>]... [-o <dataset.json>]` | Makes a dataset from real answers that are already in the form of an answers file. |
+| `dataset export <dataset.json> --csv --ddi <DDI> [--access <level>] [-o <file.csv>]` | Writes the values as long CSV. |
+| `dataset export <dataset.json> --provenance --ddi <DDI> [--access <level>] [-o <file.json>]` | Writes the dataset without its values. |
+| `qsf-map <DDI or tag reference> -o <dir>` | Writes the column map of a Qualtrics survey. See [workspace.md](workspace.md). |
+| `qsf-map --export <export.csv> --ddi <DDI> -o <dir>` | Writes the same map from an export of a fielded survey. |
 
 Rules:
 
@@ -62,11 +64,12 @@ Rules:
 - `dataset export` compares the SHA-256 digest of the `--ddi` file with the digest that
   the dataset records. If they are different, it writes nothing (`dataset-ddi`).
 
-See [datasets.md](datasets.md) for maps, provenance and access levels.
+`<DDI>` is a DDI file or, from 2.0.0-alpha.13, a DDI URL. See [datasets.md](datasets.md)
+for the DDI URL, the provenance and access levels.
 
 ## One step of an interview
 
-`next <file.json> [state.json]` reads the DDI of an instrument and a state, and writes
+`next <DDI> [state.json]` reads the DDI of an instrument and a state, and writes
 the next step as JSON. With no state file, or with `-`, it reads the state from stdin.
 `next --schema` writes the JSON Schemas of the state and of the reply.
 
