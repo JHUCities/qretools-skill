@@ -40,11 +40,6 @@ must be empty.**
 1. Get the DDI of the instrument: the DDI URL of a release, or a DDI file.
 2. Write a config. Start from `examples/gss_2010/config.toml` in the harness repository.
    Set `instrument` to the URL or to the path of the file.
-
-   **Caution: a DDI URL and `examples/gss_2010/` need a harness that pins qretools
-   2.0.0-alpha.13 or later. Read the version in the README of the harness. With an
-   earlier harness, download the DDI (`curl -fsSL -o <file> <DDI URL>`), give the path
-   of the file, and start from `examples/config.toml`.**
 3. Run `qretools-harness check-config config.toml`.
 4. Correct each problem that `check-config` gives.
 5. Start the model server. For llama.cpp, give one slot (`-np 1`). llama.cpp gives the
